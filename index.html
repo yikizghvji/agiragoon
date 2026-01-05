@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>アギらグゥん</title>
+<style>
+html,body{
+  margin:0;
+  padding:0;
+  background:#000;
+  overflow:hidden;
+}
+canvas{
+  display:block;
+}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+resize();
+window.addEventListener("resize", resize);
+
+function resize(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+
+const lanes = [-1,0,1];
+let playerLane = 0;
+let jump = 0;
+let jumpV = 0;
+
+let speed = 12;
+let distance = 0;
+
+const obstacles = [];
+
+function spawnObstacle(){
+  obstacles.push({
+    lane: lanes[Math.floor(Math.random()*3)],
+    z: 1000
+  });
+}
+
+setInterval(spawnObstacle, 900);
+
+canvas.addEventListener("touchstart", e=>{
+  const x = e.touches[0].clientX;
+  const w = canvas.width;
+  if(x < w*0.33) playerLane = -1;
+  else if(x > w*0.66) playerLane = 1;
+  else if(jump===0){
+    jumpV = 28;
+  }
+});
+
+function project(x,z,y){
+  const scale = 400/(z);
+  return {
+    x: canvas.width/2 + x*scale,
+    y: canvas.height*0.65 + y*scale,
+    s: scale
+  };
+}
+
+function update(){
+  ctx.fillStyle = "#050505";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  // 道
+  for(let i=0;i<50;i++){
+    const z = i*80;
+    const p = project(0, z+200, 0);
+    ctx.fillStyle = i%2==0 ? "#222" : "#1a1a1a";
+    ctx.fillRect(
+      p.x - 300*p.s,
+      p.y,
+      600*p.s,
+      80*p.s
+    );
+  }
+
+  // プレイヤー
+  if(jumpV!==0 || jump>0){
+    jump += jumpV;
+    jumpV -= 2;
+    if(jump<0){
+      jump=0;
+      jumpV=0;
+    }
+  }
+
+  const px = playerLane*200;
+  const p = project(px,200,-jump);
+  ctx.fillStyle = "#ccc";
+  ctx.fillRect(
+    p.x-20*p.s,
+    p.y-60*p.s,
+    40*p.s,
+    60*p.s
+  );
+
+  // 障害物
+  for(let i=obstacles.length-1;i>=0;i--){
+    const o = obstacles[i];
+    o.z -= speed;
+    const op = project(o.lane*200,o.z,0);
+
+    ctx.fillStyle = "#700";
+    ctx.fillRect(
+      op.x-30*op.s,
+      op.y-50*op.s,
+      60*op.s,
+      50*op.s
+    );
+
+    if(o.z<250 && o.lane===playerLane && jump<20){
+      alert("GAME OVER\n距離: "+Math.floor(distance));
+      location.reload();
+    }
+
+    if(o.z<50) obstacles.splice(i,1);
+  }
+
+  distance += speed*0.1;
+
+  ctx.fillStyle="#fff";
+  ctx.font="20px sans-serif";
+  ctx.fillText("DISTANCE: "+Math.floor(distance),20,30);
+
+  requestAnimationFrame(update);
+}
+
+update();
+</script>
+</body>
+</html>
